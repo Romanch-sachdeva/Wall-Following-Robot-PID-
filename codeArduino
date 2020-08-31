@@ -1,0 +1,129 @@
+const int ln1=9; //define L298 motor pins
+const int ln2=8;
+const int ln3=6;
+const int ln4=7;
+const int enA=10; //define L298 enable pins
+const int enB=5; //!enable pins have to connect with arduino's PWM pins!
+const int trigpin=A3; //define left HC-SR04 pins
+const int echopin=A4;
+const int trigpin2=A1; //define front HC-SR04 pins
+const int echopin2=A2;
+int distance1; //define distance and time
+int time1;
+int distance2;
+int time2;
+int redLed=4; //define leds
+int greenLed=2;
+int newLed=3;
+void setup() {
+pinMode(ln1,OUTPUT); //all motor pins output
+pinMode(ln2,OUTPUT);
+pinMode(ln3,OUTPUT);
+pinMode(ln4,OUTPUT);
+pinMode(enA,OUTPUT);
+pinMode(enB,OUTPUT);
+pinMode(trigpin,OUTPUT); //trigpin is output because it sends sound wave
+pinMode(echopin, INPUT); //echopin is ınput because it receives sound wave
+pinMode(trigpin2,OUTPUT);
+pinMode(echopin2,INPUT);
+pinMode(redLed,OUTPUT);
+pinMode(greenLed,OUTPUT);
+pinMode(newLed,OUTPUT);
+Serial.begin(9600);
+}
+void loop() {
+//FOR MEASURE THE DISTANCE
+digitalWrite(trigpin,LOW); //first, we start trigpin low
+delay(45);
+digitalWrite(trigpin,HIGH); //second, we open trigpin and send sound made
+delay(45);
+digitalWrite(trigpin,LOW); //then, we close again for other loop
+time1 = pulseIn(echopin,HIGH); //then, we open echopin and receive sound made and
+//we measure the time with pulseIn() function.
+distance1 = time1/(2*29.1); ////finally, we measure the distance between wall and the robot
+digitalWrite(trigpin2,LOW);
+delay(45);
+digitalWrite(trigpin2,HIGH);
+delay(45);
+digitalWrite(trigpin2,LOW);
+time2 = pulseIn(echopin2,HIGH);
+distance2 = time2/(2*29.1);
+//FOR LEDs
+int baseDistant=17;
+if(distance1 >= (baseDistant-1) && distance1 <= (baseDistant + 1) ){
+digitalWrite(redLed,HIGH);digitalWrite(greenLed,LOW);
+}
+else if(distance1>(baseDistant + 1)){
+digitalWrite(greenLed,HIGH); digitalWrite(redLed,LOW);
+}
+else{
+digitalWrite(redLed,LOW);digitalWrite(greenLed,LOW);
+}
+//FOR PID
+float error;
+float lastError=0;
+float integral=0;
+float motorSpeed;
+float rightMotorSpeed;
+float leftMotorSpeed;
+float rightBaseSpeed = 90;
+float leftBaseSpeed = 100;
+float kp = 6.5; //kp,ki,kd values should be chance for better result
+float ki = 2.4;
+float kd = 1;
+error = distance1 - baseDistant;
+integral +=error;
+motorSpeed = (kp*error) + (kd*(error - lastError)) + (ki*integral);
+lastError = error;
+Serial.print("motorSpeed ");
+Serial.println(motorSpeed);
+rightMotorSpeed =rightBaseSpeed + motorSpeed/2;
+leftMotorSpeed =leftBaseSpeed - motorSpeed/2;
+Serial.print("rightmotorSpeed ");
+Serial.println(rightMotorSpeed);
+Serial.print("leftmotorSpeed ");
+Serial.println(leftMotorSpeed);
+//to avoid high speed
+if(rightMotorSpeed > 150){
+rightMotorSpeed = 150;
+}
+if(rightMotorSpeed <0){
+rightMotorSpeed =0;
+}
+if(leftMotorSpeed > 150){
+leftMotorSpeed = 150;
+}
+if(leftMotorSpeed < 0 ){
+leftMotorSpeed = 0;
+}
+digitalWrite(ln1,HIGH);
+digitalWrite(ln2,LOW);
+analogWrite(enA,rightMotorSpeed);
+digitalWrite(ln3,HIGH);
+digitalWrite(ln4,LOW);
+analogWrite(enB,leftMotorSpeed);
+if(distance2 < 20){ //if front distance smaller than 20cm
+//REVERSE
+digitalWrite(ln1,LOW);
+digitalWrite(ln2,HIGH);
+analogWrite(enA,250);
+digitalWrite(ln3,LOW);
+digitalWrite(ln4,HIGH);
+analogWrite(enB,250);
+digitalWrite(newLed,LOW);
+delay(500);
+//TURN RIGHT
+if(distance1 >= (baseDistant-2) && distance1 <= (baseDistant + 2) ){
+digitalWrite(ln1,LOW);
+digitalWrite(ln2,HIGH);
+analogWrite(enA,250);
+digitalWrite(ln3,HIGH);
+digitalWrite(ln4,LOW);
+analogWrite(enB,250);
+//digitalWrite(newLed,LOW);
+delay(500);
+}
+}
+Serial.println(distance1);
+Serial.println(distance2);
+}
